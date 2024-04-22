@@ -1,15 +1,23 @@
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <stdio.h>    // header file
+#include <stdlib.h>   // header file
+#include <string.h>   // header file
+#define SIZE 30
 
-void toUpperCase(char encrypt[], int ps) {
-    for (int i = 0; i < ps; i++) {
-        if (encrypt[i] > 96 && encrypt[i] < 123)
-            encrypt[i] -= 32;
+// Conversion of characters
+// of the string to lowercase
+void toLowerCase(char plain[], int ps)
+{
+    int i;
+    for (i = 0; i < ps; i++) {
+        if (plain[i] > 64 && plain[i] < 91)
+            plain[i] += 32;
     }
 }
 
-int removeSpaces(char* plain, int ps) {
+
+// spaces is removed from the string
+int removeSpaces(char* plain, int ps)
+{
     int i, count = 0;
     for (i = 0; i < ps; i++)
         if (plain[i] != ' ')
@@ -18,18 +26,62 @@ int removeSpaces(char* plain, int ps) {
     return count;
 }
 
-void search(char keyMat[5][5], char a, char b, int arr[]) {
+// here, 5x5 key square is generated 
+void generateKeyTable(char key[], int ks, char keyT[5][5])
+{
+    int i, j, k, flag = 0, *dicty;
+
+    // hashmap of 26 character that willl store the alphabet count
+    dicty = (int*)calloc(26, sizeof(int));
+
+    for (i = 0; i < ks; i++) {
+        if (key[i] != 'j')
+            dicty[key[i] - 97] = 2;
+    }
+    dicty['j' - 97] = 1;
+
+    i = 0;
+    j = 0;
+    for (k = 0; k < ks; k++) {
+        if (dicty[key[k] - 97] == 2) {
+            dicty[key[k] - 97] -= 1;
+            keyT[i][j] = key[k];
+            j++;
+            if (j == 5) {
+                i++;
+                j = 0;
+            }
+        }
+    }
+    for (k = 0; k < 26; k++) {
+        if (dicty[k] == 0) {
+            keyT[i][j] = (char)(k + 97);
+            j++;
+            if (j == 5) {
+                i++;
+                j = 0;
+            }
+        }
+    }
+}
+
+// characters and position of letters od digraph is searched from the key
+void search(char keyT[5][5], char a, char b, int arr[])
+{
+    int i, j;
+
     if (a == 'j')
         a = 'i';
     else if (b == 'j')
         b = 'i';
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 5; j++) {
-            if (keyMat[i][j] == a) {
+
+    for (i = 0; i < 5; i++) {
+        for (j = 0; j < 5; j++) {
+            if (keyT[i][j] == a) {
                 arr[0] = i;
                 arr[1] = j;
             }
-            else if (keyMat[i][j] == b) {
+            else if (keyT[i][j] == b) {
                 arr[2] = i;
                 arr[3] = j;
             }
@@ -37,132 +89,155 @@ void search(char keyMat[5][5], char a, char b, int arr[]) {
     }
 }
 
-int prep(char str[], int p) {
-    int sub = p;
-    for (int i = 0; i < sub; i += 2) {
-        if(str[i]==str[i+1]){
-            for(int j=sub; j>i+1; j--){
-               str[j]=str[j-1];
-            }
-            str[i+1]='x';
-            sub+=1;
-        }
-    }
-    str[sub]='\0';
-    if (sub % 2 != 0) {
-        str[sub++] = 'z';
-        str[sub] = '\0';
-    }
-    return sub;
+// this function will find the modulus with 5
+int mod5(int a)
+{
+    if (a < 0)
+        a += 5;
+    return (a % 5);
 }
 
-void createMatrix(char keystr[], int ks, char keyMat[5][5]) {
-    int flag = 0, *dict;
-    dict = (int*)calloc(26, sizeof(int));
-    for (int i = 0; i < ks; i++) {
-        if (keystr[i] != 'j')
-            dict[keystr[i] - 97] = 2;
+// this function will make the plain text length even
+int prepare(char str[], int ptrs)
+{
+    if (ptrs % 2 != 0) {
+        str[ptrs++] = 'z';
+        str[ptrs] = '\0';
     }
-    dict['j' - 97] = 1;
-    int i = 0, j = 0;
-    for (int k = 0; k < ks; k++) {
-        if (dict[keystr[k] - 97] == 2) {
-            dict[keystr[k] - 97] -= 1;
-            keyMat[i][j] = keystr[k];
-            j++;
-            if (j == 5) {
-                i++;
-                j = 0;
-            }
-        }
-    }
-    for (int k = 0; k < 26; k++) {
-        if (dict[k] == 0) {
-            keyMat[i][j] = (char)(k + 97);
-            j++;
-            if (j == 5) {
-                i++;
-                j = 0;
-            }
-        }
-    }
+    return ptrs;
 }
 
-void encrypt(char str[], char keyMat[5][5], int pos) {
-    int a[4];
-    for (int i = 0; i < pos; i += 2) {
-        search(keyMat, str[i], str[i + 1], a);
+// encryption will done using this function
+void encrypt(char str[], char keyT[5][5], int ps)
+{
+    int i, a[4];
+
+    for (i = 0; i < ps; i += 2) {
+
+        search(keyT, str[i], str[i + 1], a);
+
         if (a[0] == a[2]) {
-            str[i] = keyMat[a[0]][(a[1] + 1) % 5];
-            str[i + 1] = keyMat[a[0]][(a[3] + 1) % 5];
+            str[i] = keyT[a[0]][mod5(a[1] + 1)];
+            str[i + 1] = keyT[a[0]][mod5(a[3] + 1)];
         }
         else if (a[1] == a[3]) {
-            str[i] = keyMat[(a[0] + 1) % 5][a[1]];
-            str[i + 1] = keyMat[(a[2] + 1) % 5][a[1]];
+            str[i] = keyT[mod5(a[0] + 1)][a[1]];
+            str[i + 1] = keyT[mod5(a[2] + 1)][a[1]];
         }
         else {
-            str[i] = keyMat[a[0]][a[3]];
-            str[i + 1] = keyMat[a[2]][a[1]];
+            str[i] = keyT[a[0]][a[3]];
+            str[i + 1] = keyT[a[2]][a[1]];
         }
     }
 }
 
-void decrypt(char str[], char keyMat[5][5], int pos) {
-    int a[4];
-    for (int i = 0; i < pos; i += 2) {
-        search(keyMat, str[i], str[i + 1], a);
+// this function will encrypt cipher text using Playfair Cipher algorithm
+void encryptByPlayfairCipher(char str[], char key[])
+{
+    char ps, ks, keyT[5][5];
+
+    // Key text
+    ks = strlen(key);
+    ks = removeSpaces(key, ks);
+    toLowerCase(key, ks);
+
+    // Plain text
+    ps = strlen(str);
+    toLowerCase(str, ps);
+    ps = removeSpaces(str, ps);
+
+    ps = prepare(str, ps);
+
+    generateKeyTable(key, ks, keyT);
+
+    encrypt(str, keyT, ps);
+}
+
+// this function calls the decrypt function
+void decrypt(char str[], char keyT[5][5], int ps)
+{
+    int i, a[4];
+    for (i = 0; i < ps; i += 2) {
+        search(keyT, str[i], str[i + 1], a);
         if (a[0] == a[2]) {
-            str[i] = keyMat[a[0]][(a[1] - 1 + 5) % 5];
-            str[i + 1] = keyMat[a[0]][(a[3] - 1 + 5) % 5];
+            str[i] = keyT[a[0]][mod5(a[1] - 1)];
+            str[i + 1] = keyT[a[0]][mod5(a[3] - 1)];
         }
         else if (a[1] == a[3]) {
-            str[i] = keyMat[(a[0] - 1 + 5) % 5][a[1]];
-            str[i + 1] = keyMat[(a[2] - 1 + 5) % 5][a[1]];
+            str[i] = keyT[mod5(a[0] - 1)][a[1]];
+            str[i + 1] = keyT[mod5(a[2] - 1)][a[1]];
         }
         else {
-            str[i] = keyMat[a[0]][a[3]];
-            str[i + 1] = keyMat[a[2]][a[1]];
+            str[i] = keyT[a[0]][a[3]];
+            str[i + 1] = keyT[a[2]][a[1]];
         }
     }
 }
 
-int main() {
-    char string[200], keyString[200];
-    char keyMat[5][5];
-    printf("Play Fair cipher\n");
-    printf("Enter key: ");
-    scanf("%[^\n]s", keyString);
-    printf("Enter plaintext: ");
-    scanf("\n");
-    scanf("%[^\n]s", string);
+// this function wil call the decrypt function
+void decryptByPlayfairCipher(char str[], char key[])
+{
+    char ps, ks, keyT[5][5];
 
-    int choice;
-    printf("Select operation:\n");
-    printf("1. Encrypt\n2. Decrypt\n");
-    scanf("%d", &choice);
+    // Key text
+    ks = strlen(key);
+    ks = removeSpaces(key, ks);
+    toLowerCase(key, ks);
 
-    int ps = strlen(string);
-    int ks = strlen(keyString);
+    // Ciphertext
+    ps = strlen(str);
+    toLowerCase(str, ps);
+    ps = removeSpaces(str, ps);
 
-    ks = removeSpaces(keyString, ks);
-    ps = removeSpaces(string, ps);
-    ps = prep(string, ps);
-    createMatrix(keyString, ks, keyMat);
+    generateKeyTable(key, ks, keyT);
 
-    switch (choice) {
-        case 1:
-            encrypt(string, keyMat, ps);
-            toUpperCase(string, ps);
-            printf("Cipher text: %s\n", string);
-            break;
-        case 2:
-            decrypt(string, keyMat, ps);
-            toUpperCase(string, ps);
-            printf("Decrypted text: %s\n", string);
-            break;
-        default:
-            printf("Invalid choice!\n");
-            break;
+    decrypt(str, keyT, ps);
+}
+int main()
+{
+    char str[SIZE], key[SIZE];
+    char choice;
+
+    // Get the key from the user
+    printf("Enter the key: ");
+    fgets(key, SIZE, stdin);
+    key[strcspn(key, "\n")] = '\0';  // Remove newline character
+
+    // Key text that needs to be encrypted
+    printf("Key text: %s\n", key);
+
+    // Ask the user for encryption or decryption
+    printf("Enter 'e' for encryption or 'd' for decryption: ");
+    scanf(" %c", &choice);
+
+    // Clear the input buffer
+    while ((getchar()) != '\n');
+
+    // Process based on user choice
+    if (choice == 'e') {
+        // Get the plaintext from the user
+        printf("Enter the plaintext: ");
+        fgets(str, SIZE, stdin);
+        str[strcspn(str, "\n")] = '\0';  // Remove newline character
+
+        // Encryption using Playfair Cipher algorithm
+        encryptByPlayfairCipher(str, key);
+
+        // Display the ciphertext
+        printf("Cipher text: %s\n", str);
+    } else if (choice == 'd') {
+        // Get the ciphertext from the user
+        printf("Enter the ciphertext: ");
+        fgets(str, SIZE, stdin);
+        str[strcspn(str, "\n")] = '\0';  // Remove newline character
+
+        // Decryption using Playfair Cipher algorithm
+        decryptByPlayfairCipher(str, key);
+
+        // Display the decrypted text
+        printf("Deciphered text: %s\n", str);
+    } else {
+        printf("Invalid choice.\n");
     }
 
     return 0;
